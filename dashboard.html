@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Security Monitoring Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .table-wrapper { max-height: 400px; overflow-y: auto; }
+        .card-summary { margin-bottom: 20px; }
+    </style>
+</head>
+<body class="bg-dark text-light">
+<div class="container-fluid p-4">
+    <h1 class="text-warning">Security Monitoring Dashboard</h1>
+    <p>Live view of file, process, and network events with correlation alerts and countermeasures.</p>
+
+    <div class="row card-summary">
+        <div class="col-md-3">
+            <div class="card bg-secondary text-light">
+                <div class="card-body">
+                    <h5 class="card-title">Total Events</h5>
+                    <p class="card-text" id="total-events">0</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-light">
+                <div class="card-body">
+                    <h5 class="card-title">Critical Alerts</h5>
+                    <p class="card-text" id="critical-alerts">0</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <h5 class="card-title">High Alerts</h5>
+                    <p class="card-text" id="high-alerts">0</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h3 class="mt-4 text-info">Recent Events</h3>
+    <div class="table-wrapper">
+        <table class="table table-dark table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Event Type</th>
+                    <th>Path / Source</th>
+                    <th>Technique</th>
+                    <th>Severity</th>
+                    <th>Host</th>
+                    <th>Countermeasures</th>
+                </tr>
+            </thead>
+            <tbody id="events-tbody">
+            </tbody>
+        </table>
+    </div>
+
+    <h3 class="mt-4 text-danger">Correlation Alerts</h3>
+    <div class="table-wrapper">
+        <table class="table table-bordered table-dark table-hover">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Events</th>
+                    <th>Techniques</th>
+                    <th>Severity</th>
+                    <th>Description</th>
+                    <th>Countermeasures</th>
+                </tr>
+            </thead>
+            <tbody id="correlations-tbody">
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+<script>
+function updateDashboard() {
+    $.getJSON("/api/events", function(events) {
+        let tbody = $("#events-tbody");
+        tbody.empty();
+        $("#total-events").text(events.length);
+
+        events.forEach(function(e) {
+            let severityBadge = "bg-secondary";
+            if(e.severity === "CRITICAL") severityBadge = "bg-danger";
+            else if(e.severity === "HIGH") severityBadge = "bg-warning text-dark";
+            else if(e.severity === "MEDIUM") severityBadge = "bg-info text-dark";
+
+            tbody.append(`
+                <tr>
+                    <td>${e.timestamp}</td>
+                    <td>${e.event_type}</td>
+                    <td>${e.file_path}</td>
+                    <td>${e.mitre_technique}</td>
+                    <td><span class="badge ${severityBadge}">${e.severity}</span></td>
+                    <td>${e.hostname}</td>
+                    <td>${e.countermeasures || "None"}</td>
+                </tr>
+            `);
+        });
+    });
+
+    $.getJSON("/api/correlations", function(correlations) {
+        let tbody = $("#correlations-tbody");
+        tbody.empty();
+
+        let criticalCount = 0, highCount = 0;
+        correlations.forEach(function(c) {
+            let severityBadge = "bg-secondary";
+            if(c.severity === "CRITICAL") { severityBadge = "bg-danger"; criticalCount++; }
+            else if(c.severity === "HIGH") { severityBadge = "bg-warning text-dark"; highCount++; }
+
+            tbody.append(`
+                <tr>
+                    <td>${c.timestamp}</td>
+                    <td>${c.event_count}</td>
+                    <td>${c.techniques}</td>
+                    <td><span class="badge ${severityBadge}">${c.severity}</span></td>
+                    <td>${c.description}</td>
+                    <td>${c.countermeasures || "None"}</td>
+                </tr>
+            `);
+        });
+
+        $("#critical-alerts").text(criticalCount);
+        $("#high-alerts").text(highCount);
+    });
+}
+
+setInterval(updateDashboard, 5000);
+updateDashboard(); 
+</script>
+</body>
+</html>
