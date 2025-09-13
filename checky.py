@@ -1,11 +1,20 @@
 import sqlite3
 
-conn = sqlite3.connect("threat_detection.db")
+db_path = "threat_detection.db"
+
+conn = sqlite3.connect(db_path)
 cursor = conn.cursor()
 
-cursor.execute("SELECT timestamp, event_type, countermeasures FROM events ORDER BY timestamp DESC LIMIT 5")
-rows = cursor.fetchall()
-for r in rows:
-    print(r)
+# Get all tables
+cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+tables = cursor.fetchall()
 
+# Wipe each table
+for table in tables:
+    table_name = table[0]
+    cursor.execute(f"DELETE FROM {table_name};")
+    print(f"[INFO] Cleared table: {table_name}")
+
+conn.commit()
 conn.close()
+print("[INFO] Database cleared but schema intact.")
