@@ -6,6 +6,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+
 class EventCorrelator:
     def __init__(self, db_path="threat_detection.db", d3fend_file="compact_d3fend.json"):
         self.db_path = db_path
@@ -41,7 +42,8 @@ class EventCorrelator:
             techniques TEXT,
             severity TEXT,
             description TEXT,
-            countermeasures TEXT
+            countermeasures TEXT,
+            status TEXT
         )''')
         conn.commit()
         conn.close()
@@ -50,8 +52,8 @@ class EventCorrelator:
         cutoff_time = time.time() - seconds
         conn = sqlite3.connect(self.db_path)
         cursor = conn.execute('''
-            SELECT event_type, file_path, mitre_technique, severity, datetime_str, details 
-            FROM events 
+            SELECT id, event_type, file_path, mitre_technique, severity, datetime_str, details
+            FROM events
             WHERE timestamp > ?
         ''', (cutoff_time,))
         events = cursor.fetchall()
@@ -59,7 +61,6 @@ class EventCorrelator:
         return events
 
     def generate_countermeasure(self, severity, techniques):
-        """Generate countermeasures dynamically based on severity and MITRE techniques."""
         measures = []
 
         if "T1055.001" in techniques:
@@ -82,37 +83,23 @@ class EventCorrelator:
 
         return " | ".join(measures)
 
-    def apply_countermeasures(self, technique_id):
-        """Apply or simulate countermeasures based on MITRE technique from D3FEND mapping."""
-        if technique_id not in self.d3fend_map:
-            print(f"[INFO] No countermeasures found for {technique_id}")
-            return
-
-        cms = self.d3fend_map[technique_id].get("countermeasures", [])
-        if not cms:
-            print(f"[INFO] Empty countermeasure list for {technique_id}")
-            return
-
-        print(f"[ACTION] Countermeasures for {technique_id}:")
-        for cm in cms:
-            print(f"   - {cm}")
-            self.simulate_action(cm)
-
-    def simulate_action(self, countermeasure):
-        """Stub to simulate actual response actions."""
-        if "Terminate Process" in countermeasure:
-            print("[SYSTEM] Would terminate malicious process here")
-        elif "Network Isolation" in countermeasure:
-            print("[SYSTEM] Would isolate network here")
-        elif "File Quarantine" in countermeasure:
-            print("[SYSTEM] Would move file to quarantine folder")
-        else:
-            print(f"[SYSTEM] Simulated countermeasure: {countermeasure}")
+    def execute_action(self, countermeasure):
+        try:
+            if "Terminate" in countermeasure:
+                print("[SYSTEM] Terminating malicious process (simulated).")
+            elif "Network Isolation" in countermeasure:
+                print("[SYSTEM] Applying network isolation (simulated).")
+            elif "Quarantine" in countermeasure:
+                print("[SYSTEM] Quarantining file (simulated).")
+            else:
+                print(f"[SYSTEM] Executed generic action: {countermeasure}")
+        except Exception as e:
+            print(f"[ERROR] Failed to execute countermeasure {countermeasure}: {e}")
 
     def send_alert(self, subject, body):
         sender = "madhangir2005@gmail.com"
         receiver = "divyax1385@gmail.com"
-        password = "kacf kepe wula dlev" 
+        password = "kacf kepe wula dlev"  # ⚠ App password
 
         try:
             msg = MIMEMultipart()
@@ -131,51 +118,104 @@ class EventCorrelator:
         except Exception as e:
             print(f"[ERROR] Failed to send email alert: {e}")
 
+    def is_already_handled(self, techniques):
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT id, status FROM correlations
+            WHERE techniques = ?
+            ORDER BY id DESC
+            LIMIT 1
+        ''', (",".join(techniques),))
+        row = cursor.fetchone()
+        conn.close()
+        return row is not None and row[1] == "HANDLED"
+
+    def apply_countermeasures_batch(self, events, correlation_id):
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT status FROM correlations WHERE id = ?", (correlation_id,))
+        status = cursor.fetchone()[0]
+
+        if status == "HANDLED":
+            for event in events:
+                tech_id = event[3]
+                if tech_id in self.d3fend_map:
+                    cms = self.d3fend_map[tech_id].get("countermeasures", [])
+                    for cm in cms:
+                        self.execute_action(cm)
+            conn.close()
+            return True
+
+        unique_techniques = list(set(e[3] for e in events if e[3]))
+        print(f"\n[ACTION] Batch countermeasures for {len(events)} events (techniques: {', '.join(unique_techniques)}):")
+
+        choice = input("   Apply countermeasures for this batch? (y/n): ").strip().lower()
+        if choice != "y":
+            print("[INFO] Batch skipped. Correlation remains PENDING.\n")
+            conn.close()
+            return False
+
+        for tech_id in unique_techniques:
+            if tech_id in self.d3fend_map:
+                cms = self.d3fend_map[tech_id].get("countermeasures", [])
+                for cm in cms:
+                    self.execute_action(cm)
+
+        conn.execute("UPDATE correlations SET status='HANDLED' WHERE id=?", (correlation_id,))
+        conn.commit()
+        conn.close()
+        print(f"[INFO] Batch of {len(events)} events marked as HANDLED\n")
+        return True
+
     def correlate(self):
         events = self.fetch_recent_events()
         if not events:
             print("[INFO] No events in DB, skipping...")
             return
 
-        alerts = [{
-            "severity": "HIGH",
-            "rule": "Event Correlation Detected",
-            "description": f"{len(events)} recent event(s) found."
-        }]
+        techniques_list = list(set(e[3] for e in events if e[3]))
+        if self.is_already_handled(techniques_list):
+            print("[INFO] These techniques were already handled. Skipping correlation.")
+            return
+
+        countermeasure = self.generate_countermeasure("HIGH", techniques_list)
 
         conn = sqlite3.connect(self.db_path)
-        for alert in alerts:
-            techniques_list = list(set(e[2] for e in events if e[2]))
-            countermeasure = self.generate_countermeasure(alert["severity"], techniques_list)
-
-            conn.execute('''
-                INSERT INTO correlations (timestamp, event_count, techniques, severity, description, countermeasures)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (
-                time.time(),
-                len(events),
-                ",".join(techniques_list),
-                alert["severity"],
-                alert["description"],
-                countermeasure
-            ))
-            conn.commit()
-
-            print("\n" + "="*60)
-            print(f"ALERT: {alert['rule']} | Severity: {alert['severity']}")
-            print(f"Description: {alert['description']}")
-            print(f"Countermeasures: {countermeasure}")
-            print("="*60 + "\n")
-
-            self.send_alert(
-                subject=f"[SECURITY ALERT] {alert['rule']} - {alert['severity']}",
-                body=f"{alert['description']}\nCountermeasures: {countermeasure}"
-            )
-
-            for event in events:
-                tech_id = event[2]
-                self.apply_countermeasures(tech_id)
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO correlations (timestamp, event_count, techniques, severity, description, countermeasures, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            time.time(),
+            len(events),
+            ",".join(techniques_list),
+            "HIGH",
+            f"{len(events)} recent event(s) found.",
+            countermeasure,
+            "PENDING"
+        ))
+        conn.commit()
+        correlation_id = cursor.lastrowid
         conn.close()
+
+        print("\n" + "="*60)
+        print(f"ALERT: Event Correlation Detected | Severity: HIGH")
+        print(f"Description: {len(events)} recent event(s) found.")
+        print(f"Countermeasures: {countermeasure}")
+        print(f"Correlation ID: {correlation_id} | Status: PENDING")
+        print("="*60 + "\n")
+
+        self.send_alert(
+            subject=f"[SECURITY ALERT] Event Correlation Detected - HIGH",
+            body=f"{len(events)} recent event(s) found.\nCountermeasures: {countermeasure}"
+        )
+
+        # Process in batches of 10
+        BATCH_SIZE = 10
+        for i in range(0, len(events), BATCH_SIZE):
+            batch = events[i:i+BATCH_SIZE]
+            self.apply_countermeasures_batch(batch, correlation_id)
 
     def run(self, interval=60):
         print(f"[INFO] Event correlator running every {interval} seconds...")
@@ -186,40 +226,33 @@ class EventCorrelator:
         except KeyboardInterrupt:
             print("\n[INFO] Event correlator stopped.")
 
-def insert_fake_events(db_path="threat_detection.db"):
+
+def insert_small_fake_events(db_path="threat_detection.db"):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     now = time.time()
     dt_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    cursor.execute('''
-        INSERT INTO events (timestamp, event_type, file_path, mitre_technique, severity, datetime_str, details)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    ''', (now, "FILE", "/tmp/suspicious.exe", "T1105", "HIGH", dt_str, "Suspicious file created"))
-
-    cursor.execute('''
-        INSERT INTO events (timestamp, event_type, file_path, mitre_technique, severity, datetime_str, details)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    ''', (now, "PROCESS", "malware.exe", "T1059.001", "CRITICAL", dt_str, "Suspicious process started"))
-
-    cursor.execute('''
-        INSERT INTO events (timestamp, event_type, file_path, mitre_technique, severity, datetime_str, details)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    ''', (now, "NETWORK", "192.168.1.50", "T1049", "MEDIUM", dt_str, "Suspicious connection opened"))
+    for i in range(10):
+        cursor.execute('''
+            INSERT INTO events (timestamp, event_type, file_path, mitre_technique, severity, datetime_str, details)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            now,
+            "FILE",
+            f"/tmp/fake{i}.exe",
+            "T1105" if i % 2 == 0 else "T1059.001",
+            "HIGH" if i % 3 == 0 else "MEDIUM",
+            dt_str,
+            f"Fake suspicious file {i}"
+        ))
 
     conn.commit()
     conn.close()
-    print("[TEST] Fake events inserted into DB")
+    print("[TEST] 10 fake events inserted into DB")
 
 
 if __name__ == "__main__":
+    insert_small_fake_events()  # Only 10 events
     correlator = EventCorrelator()
-
-    correlator.send_alert(
-        "Test Alert - Email Check",
-        "This is a forced test alert to confirm the email system works."
-    )
-
-    insert_fake_events()
-
     correlator.run(5)
