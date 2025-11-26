@@ -99,7 +99,7 @@ class EventCorrelator:
     def send_alert(self, subject, body):
         sender = "madhangir2005@gmail.com"
         receiver = "divyax1385@gmail.com"
-        password = "kacf kepe wula dlev"  # ⚠ App password
+        password = "kacf kepe wula dlev" 
 
         try:
             msg = MIMEMultipart()
@@ -211,7 +211,6 @@ class EventCorrelator:
             body=f"{len(events)} recent event(s) found.\nCountermeasures: {countermeasure}"
         )
 
-        # Process in batches of 10
         BATCH_SIZE = 10
         for i in range(0, len(events), BATCH_SIZE):
             batch = events[i:i+BATCH_SIZE]
@@ -253,6 +252,6 @@ def insert_small_fake_events(db_path="threat_detection.db"):
 
 
 if __name__ == "__main__":
-    insert_small_fake_events()  # Only 10 events
+    insert_small_fake_events()  
     correlator = EventCorrelator()
     correlator.run(5)
