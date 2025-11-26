@@ -41,6 +41,17 @@ def fetch_correlations():
         }
         for r in rows
     ]
+def init_database():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    # Make sure countermeasures column exists
+    try:
+        cursor.execute('ALTER TABLE events ADD COLUMN countermeasures TEXT')
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+    conn.close()
+
 
 @app.route("/api/events")
 def api_events():
@@ -56,4 +67,5 @@ def dashboard():
     return render_template("dashboard.html")
 
 if __name__ == "__main__":
+    init_database()
     app.run(debug=True)
