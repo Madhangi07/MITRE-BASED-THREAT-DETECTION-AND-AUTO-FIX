@@ -3,139 +3,445 @@
 <head>
     <title>Security Monitoring Dashboard</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; }
-        .table-wrapper { max-height: 400px; overflow-y: auto; }
-        .card-summary { margin-bottom: 20px; }
+        body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #FFFEF7;
+            color: #5A8A6F;
+            margin: 0;
+            padding: 0;
+        }
+        .dashboard-header {
+            background: #FFF9E6;
+            padding: 30px;
+            border-radius: 16px;
+            margin-bottom: 30px;
+            border: 2px solid #E8E5DD;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+        }
+        .dashboard-header h1 {
+            color: #4A7C5D;
+            font-size: 28px;
+            font-weight: 700;
+            margin: 0;
+        }
+        .dashboard-header p {
+            color: #6B9279;
+            font-size: 14px;
+            margin: 8px 0 0 0;
+            font-weight: 500;
+        }
+        .scan-button {
+            background: linear-gradient(135deg, #A8D5BA 0%, #94C9A9 100%);
+            color: #2D5440;
+            border: none;
+            padding: 14px 40px;
+            font-size: 15px;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(168, 213, 186, 0.3);
+        }
+        .scan-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(168, 213, 186, 0.4);
+            background: linear-gradient(135deg, #94C9A9 0%, #7FB89A 100%);
+        }
+        .scan-button:disabled {
+            background: #E2E8F0;
+            color: #A0AEC0;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        .report-section {
+            background: #FFF9E6;
+            border: 2px solid #E8E5DD;
+            border-radius: 16px;
+            padding: 28px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+        }
+        .report-title {
+            color: #4A7C5D;
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #F0EDE6;
+        }
+        .table-custom {
+            background: #FFF9E6;
+            border: 1px solid #E8E5DD;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .table-custom th {
+            background: #FFF4D1;
+            color: #5A8A6F;
+            border: none;
+            padding: 14px 16px;
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .table-custom td {
+            border: none;
+            border-bottom: 1px solid #F0EDE6;
+            padding: 16px;
+            color: #5A8A6F;
+            font-size: 14px;
+        }
+        .table-custom tr:last-child td {
+            border-bottom: none;
+        }
+        .table-custom tr:hover {
+            background: #FFFCF0;
+        }
+        .severity-CRITICAL {
+            background: linear-gradient(135deg, #F8B4B4 0%, #F09494 100%);
+            color: #742A2A;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 12px;
+            display: inline-block;
+        }
+        .severity-HIGH {
+            background: linear-gradient(135deg, #FECACA 0%, #FDB5B5 100%);
+            color: #9B2C2C;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 12px;
+            display: inline-block;
+        }
+        .severity-MEDIUM {
+            background: linear-gradient(135deg, #FED7AA 0%, #FDC99C 100%);
+            color: #7C2D12;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 12px;
+            display: inline-block;
+        }
+        .severity-LOW {
+            background: linear-gradient(135deg, #A8D5BA 0%, #94C9A9 100%);
+            color: #234E3E;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 12px;
+            display: inline-block;
+        }
+        .countermeasure-section {
+            
+            font-size: 13px;
+            color: #5A8A6F;
+        }
+        .apply-countermeasure-btn {
+            background: linear-gradient(135deg, #A8D5BA 0%, #94C9A9 100%);
+            color: #2D5440;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 15px;
+            box-shadow: 0 4px 12px rgba(168, 213, 186, 0.3);
+        }
+        .apply-countermeasure-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(168, 213, 186, 0.4);
+            background: linear-gradient(135deg, #94C9A9 0%, #7FB89A 100%);
+        }
+        .events-handled-section {
+            background: #FFF9E6;
+            border: 2px solid #A8D5BA;
+            border-radius: 16px;
+            padding: 28px;
+            margin-top: 30px;
+            box-shadow: 0 2px 12px rgba(168, 213, 186, 0.15);
+        }
+        .handled-title {
+            color: #4A7C5D;
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+        .status-active {
+            background: #A8D5BA;
+            box-shadow: 0 0 8px rgba(168, 213, 186, 0.6);
+        }
+        .status-inactive {
+            background: #CBD5E0;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        code {
+            background: #F7F5F0;
+            color: #5A8A6F;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+            border: 1px solid #E8E5DD;
+        }
     </style>
 </head>
-<body class="bg-dark text-light">
+<body>
 <div class="container-fluid p-4">
-    <h1 class="text-warning">Security Monitoring Dashboard</h1>
-    <p>Live view of file, process, and network events with correlation alerts and countermeasures.</p>
+    <!-- Header -->
+    <div class="dashboard-header text-center">
+        <h1>MITRE-Based Threat Detection and Auto-Fix</h1>
+        <p>Monitor, Detect and Resolve instantly.</p>
+        <p style="margin-top: 12px; color: #5A8A6F;">
+            <span class="status-indicator" id="status-indicator"></span>
+            <span id="status-text">System Ready</span>
+        </p>
+    </div>
 
-    <div class="row card-summary">
-        <div class="col-md-3">
-            <div class="card bg-secondary text-light">
-                <div class="card-body">
-                    <h5 class="card-title">Total Events</h5>
-                    <p class="card-text" id="total-events">0</p>
-                </div>
-            </div>
+    <!-- Scan Button -->
+    <div class="text-center">
+        <button class="scan-button" id="scan-button" onclick="toggleScan()">
+            Start Security Scan
+        </button>
+    </div>
+
+    <!-- Report Section -->
+    <div class="report-section">
+        <div class="report-title">Security Report</div>
+        
+        <div class="table-responsive">
+            <table class="table table-custom">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Suspicious Activity</th>
+                        <th>Severity</th>
+                        <th>Event Type</th>
+                        <th>MITRE Technique</th>
+                        <th>File Path</th>
+                        <th>Countermeasure Suggestion</th>
+                    </tr>
+                </thead>
+                <tbody id="events-tbody">
+                    <tr>
+                        <td colspan="7" class="text-center" style="color: #8AA899; padding: 40px;">
+                            <em>No security events detected. Click "Start Security Scan" to begin monitoring.</em>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
-        <div class="col-md-3">
-            <div class="card bg-danger text-light">
-                <div class="card-body">
-                    <h5 class="card-title">Critical Alerts</h5>
-                    <p class="card-text" id="critical-alerts">0</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-warning text-dark">
-                <div class="card-body">
-                    <h5 class="card-title">High Alerts</h5>
-                    <p class="card-text" id="high-alerts">0</p>
-                </div>
-            </div>
+
+        <!-- Apply Countermeasure Button -->
+        <div id="countermeasure-action" style="display: none; text-align: center; margin-top: 24px;">
+            <button class="apply-countermeasure-btn" onclick="applyCountermeasures()">
+                Apply Countermeasures
+            </button>
         </div>
     </div>
 
-    <h3 class="mt-4 text-info">Recent Events</h3>
-    <div class="table-wrapper">
-        <table class="table table-dark table-striped table-hover">
-            <thead>
-                <tr>
-                    <th>Time</th>
-                    <th>Event Type</th>
-                    <th>Path / Source</th>
-                    <th>Technique</th>
-                    <th>Severity</th>
-                    <th>Host</th>
-                    <th>Countermeasures</th>
-                </tr>
-            </thead>
-            <tbody id="events-tbody">
-            </tbody>
-        </table>
-    </div>
-
-    <h3 class="mt-4 text-danger">Correlation Alerts</h3>
-    <div class="table-wrapper">
-        <table class="table table-bordered table-dark table-hover">
-            <thead>
-                <tr>
-                    <th>Time</th>
-                    <th>Events</th>
-                    <th>Techniques</th>
-                    <th>Severity</th>
-                    <th>Description</th>
-                    <th>Countermeasures</th>
-                </tr>
-            </thead>
-            <tbody id="correlations-tbody">
-            </tbody>
-        </table>
+    <!-- Events Handled Section -->
+    <div class="events-handled-section" id="handled-section" style="display: none;">
+        <div class="handled-title">Events Handled</div>
+        
+        <div class="table-responsive">
+            <table class="table table-custom">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Event Count</th>
+                        <th>MITRE Techniques</th>
+                        <th>Severity</th>
+                        <th>Countermeasure Applied</th>
+                    </tr>
+                </thead>
+                <tbody id="handled-tbody">
+                    <tr>
+                        <td colspan="5" class="text-center" style="color: #8AA899; padding: 40px;">
+                            <em>No countermeasures applied yet.</em>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
 <script>
+let scanActive = false;
+let updateInterval = null;
+let pendingEvents = [];
+
+function toggleScan() {
+    scanActive = !scanActive;
+    const button = document.getElementById('scan-button');
+    const statusText = document.getElementById('status-text');
+    const statusIndicator = document.getElementById('status-indicator');
+    
+    if (scanActive) {
+        button.textContent = 'Stop Scan';
+        button.style.background = 'linear-gradient(135deg, #F8B4B4 0%, #F09494 100%)';
+        statusText.textContent = 'Monitoring Active';
+        statusIndicator.classList.add('status-active');
+        statusIndicator.classList.remove('status-inactive');
+        
+        updateDashboard();
+        updateInterval = setInterval(updateDashboard, 3000);
+    } else {
+        button.textContent = 'Start Security Scan';
+        button.style.background = 'linear-gradient(135deg, #A8D5BA 0%, #94C9A9 100%)';
+        statusText.textContent = 'System Ready';
+        statusIndicator.classList.add('status-inactive');
+        statusIndicator.classList.remove('status-active');
+        
+        if (updateInterval) {
+            clearInterval(updateInterval);
+            updateInterval = null;
+        }
+    }
+}
+
 function updateDashboard() {
+    if (!scanActive) return;
+    
     $.getJSON("/api/events", function(events) {
-        let tbody = $("#events-tbody");
-        tbody.empty();
-        $("#total-events").text(events.length);
-
-        events.forEach(function(e) {
-            let severityBadge = "bg-secondary";
-            if(e.severity === "CRITICAL") severityBadge = "bg-danger";
-            else if(e.severity === "HIGH") severityBadge = "bg-warning text-dark";
-            else if(e.severity === "MEDIUM") severityBadge = "bg-info text-dark";
-
-            tbody.append(`
-                <tr>
-                    <td>${e.timestamp}</td>
-                    <td>${e.event_type}</td>
-                    <td>${e.file_path}</td>
-                    <td>${e.mitre_technique}</td>
-                    <td><span class="badge ${severityBadge}">${e.severity}</span></td>
-                    <td>${e.hostname}</td>
-                    <td>${e.countermeasures || "None"}</td>
-                </tr>
-            `);
-        });
-    });
-
-    $.getJSON("/api/correlations", function(correlations) {
-        let tbody = $("#correlations-tbody");
-        tbody.empty();
-
-        let criticalCount = 0, highCount = 0;
-        correlations.forEach(function(c) {
-            let severityBadge = "bg-secondary";
-            if(c.severity === "CRITICAL") { severityBadge = "bg-danger"; criticalCount++; }
-            else if(c.severity === "HIGH") { severityBadge = "bg-warning text-dark"; highCount++; }
-
-            tbody.append(`
-                <tr>
-                    <td>${c.timestamp}</td>
-                    <td>${c.event_count}</td>
-                    <td>${c.techniques}</td>
-                    <td><span class="badge ${severityBadge}">${c.severity}</span></td>
-                    <td>${c.description}</td>
-                    <td>${c.countermeasures || "None"}</td>
-                </tr>
-            `);
-        });
-
-        $("#critical-alerts").text(criticalCount);
-        $("#high-alerts").text(highCount);
+        if (events && events.length > 0) {
+            pendingEvents = events;
+            displayEvents(events);
+        }
+    }).fail(function(err) {
+        console.error("Failed to fetch events:", err);
     });
 }
 
-setInterval(updateDashboard, 5000);
-updateDashboard(); 
+function displayEvents(events) {
+    let tbody = $("#events-tbody");
+    tbody.empty();
+    
+    if (events.length === 0) {
+        tbody.html(`
+            <tr>
+                <td colspan="7" class="text-center" style="color: #6B9279; padding: 40px;">
+                    <strong>No threats detected. System secure.</strong>
+                </td>
+            </tr>
+        `);
+        $("#countermeasure-action").hide();
+        return;
+    }
+    
+    events.forEach(function(e, index) {
+        let timeStr = e.timestamp;
+        if (typeof e.timestamp === 'number') {
+            timeStr = new Date(e.timestamp * 1000).toLocaleString();
+        }
+        
+        let activity = e.event_type || 'Unknown activity';
+        if (e.event_type && e.event_type.includes('file')) {
+            activity = 'Suspicious file operation';
+        } else if (e.event_type && e.event_type.includes('process')) {
+            activity = 'Suspicious process detected';
+        } else if (e.event_type && e.event_type.includes('network')) {
+            activity = 'Suspicious network activity';
+        }
+        
+        let countermeasure = e.countermeasures || 'Monitor and log activity';
+        
+        tbody.append(`
+            <tr>
+                <td>${timeStr}</td>
+                <td><strong>${activity}</strong></td>
+                <td><span class="severity-${e.severity}">${e.severity}</span></td>
+                <td>${e.event_type}</td>
+                <td><code>${e.mitre_technique}</code></td>
+                <td style="font-size: 12px; word-break: break-all;">${e.file_path}</td>
+                <td>
+                    <div class="countermeasure-section">
+                        ${countermeasure}
+                    </div>
+                </td>
+            </tr>
+        `);
+    });
+    
+    $("#countermeasure-action").show();
+}
+
+function applyCountermeasures() {
+    if (pendingEvents.length === 0) {
+        alert("No pending events to handle!");
+        return;
+    }
+    
+    $.getJSON("/api/correlations", function(correlations) {
+        displayHandledEvents(correlations);
+        
+        $("#events-tbody").html(`
+            <tr>
+                <td colspan="7" class="text-center" style="color: #6B9279; padding: 40px;">
+                    <strong>All threats have been neutralized!</strong>
+                </td>
+            </tr>
+        `);
+        
+        $("#countermeasure-action").hide();
+        $("#handled-section").show();
+        
+        alert(`Countermeasures applied successfully!\n\n${pendingEvents.length} threat(s) neutralized.`);
+        pendingEvents = [];
+    });
+}
+
+function displayHandledEvents(correlations) {
+    let handledTbody = $("#handled-tbody");
+    handledTbody.empty();
+    
+    if (correlations.length === 0) {
+        handledTbody.html(`
+            <tr>
+                <td colspan="5" class="text-center" style="color: #8AA899; padding: 40px;">
+                    <em>No handled events yet.</em>
+                </td>
+            </tr>
+        `);
+        return;
+    }
+    
+    correlations.forEach(function(c) {
+        let timeStr = c.timestamp;
+        if (typeof c.timestamp === 'number') {
+            timeStr = new Date(c.timestamp * 1000).toLocaleString();
+        }
+        
+        handledTbody.append(`
+            <tr>
+                <td>${timeStr}</td>
+                <td><strong>${c.event_count} events</strong></td>
+                <td><code>${c.techniques}</code></td>
+                <td><span class="severity-${c.severity}">${c.severity}</span></td>
+                <td>${c.countermeasures}</td>
+            </tr>
+        `);
+    });
+}
 </script>
 </body>
 </html>
